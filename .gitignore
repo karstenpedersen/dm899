@@ -1,0 +1,15 @@
+# Created by https://www.toptal.com/developers/gitignore/api/direnv,agda,dotenv
+# Edit at https://www.toptal.com/developers/gitignore?templates=direnv,agda,dotenv
+
+### Agda ###
+*.agdai
+MAlonzo/**
+
+### direnv ###
+.direnv
+.envrc
+
+### dotenv ###
+.env
+
+# End of https://www.toptal.com/developers/gitignore/api/direnv,agda,dotenv
