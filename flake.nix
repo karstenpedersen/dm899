@@ -13,8 +13,11 @@
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
             just
-            agda
-            agdaPackages.standard-library
+            (agdaPackages.agda.withPackages (ps: [
+              ps.standard-library
+              ps.cubical
+              ps.agda-categories
+            ]))
           ];
         };
       }

@@ -4,6 +4,7 @@
 ### Agda ###
 *.agdai
 MAlonzo/**
+_build/
 
 ### direnv ###
 .direnv
