@@ -199,6 +199,9 @@ m - zero = m
 zero - suc n = zero
 suc m - suc n = m - n
 
+minimum' : Nat → Nat → Nat
+minimum' m n = if is-zero (m - n) then m else n
+
 minimum : Nat → Nat → Nat
 minimum zero n = zero
 minimum m zero = zero
@@ -508,13 +511,14 @@ You may have to do a non-absurd case split on one of the arguments first. Try th
 different approaches:
 -}
 not-zero-and-one : (n : Nat) → n ≡ 0 → n ≡ 1 → ⊥
-not-zero-and-one n eq0 eq1 = {!!}
+not-zero-and-one zero refl ()
+not-zero-and-one (suc n) () eq1
 
 not-zero-and-one' : (n : Nat) → n ≡ 0 → n ≡ 1 → ⊥
-not-zero-and-one' n eq0 eq1 = {!!}
+not-zero-and-one' zero refl ()
 
 not-zero-and-one'' : (n : Nat) → n ≡ 0 → n ≡ 1 → ⊥
-not-zero-and-one'' n eq0 eq1 = {!!}
+not-zero-and-one'' (suc zero) () refl
 
 --Note: Recent versions of Agda allow omitting certain absurd cases altogether.
 
@@ -546,7 +550,7 @@ existence. Indeed, all proofs of the same equality are equal. This fact is calle
 of identity proofs (UIP) and is by default provable in Agda:
 -}
 uip : {A : Set} {x y : A} {p q : x ≡ y} → p ≡ q
-uip {A}{x}{y}{p}{q} = {!!}
+uip {A} {x} {y} {refl} {refl} = refl
 {-
 TRIVIA:
 Homotopy Type Theory (HoTT), an active domain of research, investigates the virtues of
@@ -568,7 +572,7 @@ As people, we know that 0 + n = n and n = n + 0.
 The first equality is easy to prove ...
 -}
 plus0-left : (n : Nat) → 0 + n ≡ n
-plus0-left n = {!!}
+plus0-left n = refl
 
 {- ... but the second one is a bit harder.
 
@@ -578,7 +582,8 @@ In general, in order to prove something about a function defined by pattern-matc
 it is a good idea to pattern-match in a similar way in the proof.
 -}
 plus0-right : (n : Nat) → n + 0 ≡ n
-plus0-right n = {!!}
+plus0-right zero = refl
+plus0-right (suc n) = cong  suc (plus0-right n)
 {-
 hint 1: you can make a recursive call `plus0-right n` to get a proof of `n + 0 ≡ n`
         Under the Curry-Howard correspondence, a recursive function corresponds to
@@ -595,7 +600,8 @@ Prove that addition on natural numbers is associative. Try to use as few cases
 as possible. (It's possible to use only 2!)
 -}
 plus-assoc : (k l m : Nat) → k + (l + m) ≡ (k + l) + m
-plus-assoc k l m = {!!}
+plus-assoc zero l m = refl
+plus-assoc (suc k) l m = cong suc (plus-assoc k l m)
 
 {-
 Now prove that addition is commutative. This proof is harder than the ones before,
@@ -625,17 +631,20 @@ Prove the following lemma:
 If (A or B) implies C, then A implies C and B implies C
 -}
 split-assumption : {A B C : Set} → (A ⊎ B → C) → (A → C) × (B → C)
-split-assumption f = {!!}
+split-assumption f = (λ x → f (left x)) , (λ x → f (right x))
 
 --note that we do not need lambda-abstractions when we use _×'_:
 split-assumption' : {A B C : Set} → (A ⊎ B → C) → (A → C) ×' (B → C)
-fst' (split-assumption' f) a = {!!}
-snd' (split-assumption' f) b = {!!}
+fst' (split-assumption' f) a = f (left a)
+snd' (split-assumption' f) b = f (right b)
 
 {-
 State and prove (using _×_):
 If A implies (B and C), then A implies B and A implies C
 -}
+
+lemma1 : { A B C : Set } → (A → B × C) → (A → B) × (A → C)
+lemma1 = {!!}
 
 {-
 We can also define inline pattern matching functions. The syntax is:
@@ -662,7 +671,7 @@ consisting of a pattern should be placed in parentheses, e.g. `(left x)`.
 If the first argument's type is already empty, we can simply write `λ ()`.
 -}
 lemma : {A B : Set} → (A → B) → (A ⊎ ⊥ → B) × (⊥ → A)
-lemma f = {!!}
+lemma f = (λ { (left x) →  f x }) , λ () 
 
 
 {-
@@ -677,7 +686,7 @@ const : {A B : Set} → A → B → A
 const a b = a
 ambiguous-function : Bool → ⊥ → Nat
 ambiguous-function bool bot =
-  {!const 5 (if bool then ⊥-elim bot else ⊥-elim bot)!}
+  const { B = Bool } 5 (if bool then ⊥-elim bot else ⊥-elim bot)
 {-
 Put the cursor in the hole above and press C-c C-space to replace it with it's contents. Reload.
 Figure out why Agda cannot possibly figure out the type of the if-expression. (Could you infer it?)
@@ -770,7 +779,7 @@ the value of a recursive call, which you need to complete the proof that equalit
 on natural numbers is decidable.
 -}
 equalNat? : (m n : Nat) → Dec (m ≡ n)
-equalNat? zero zero = {!!}
+equalNat? zero zero = yes refl
 equalNat? zero (suc n) = {!!}
 equalNat? (suc m) zero = {!!}
 --

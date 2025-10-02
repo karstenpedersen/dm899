@@ -1,0 +1,191 @@
+-- Lecture 5: Simple imperative languages. Definitions, theorem, figures, and
+-- exercises follow the numbering from the lecture notes.
+module 05-Imp where
+
+open import Data.Bool hiding (_≟_ ; if_then_else_)
+open import Data.Maybe
+open import Data.Nat
+open import Data.Product
+open import Data.Sum
+open import Function.Base
+open import Relation.Binary.PropositionalEquality
+open import Relation.Nullary.Decidable
+
+-- Subtraction
+_-_ : ℕ → ℕ → ℕ
+zero - b = zero
+a - zero = a
+suc a - suc b = a - b
+
+-- Memory locations
+Loc : Set
+Loc = ℕ -- input: \bN
+
+-- Values
+data V : Set where
+  boolV : Bool → V
+  natV : ℕ → V
+
+zipWithNatV : (ℕ → ℕ → ℕ) → Maybe V → Maybe V → Maybe V
+zipWithNatV f (just (natV x)) (just (natV y)) = just (natV $ f x y)
+zipWithNatV _ _ _ =  nothing
+
+-- State
+S : Set
+S = Loc → V
+
+-- s[l ↤ v] 4
+-- Store update
+-- S is memory, loc is location to set, v is the value to put in the location, and we get the new memory state (the last S)
+_[_↤_] : S → Loc → V → S -- input: \l-|
+(s [ l ↤ v ]) l' with l ≟ l'
+... | false because _ = s l'
+... | true because _ = v
+-- We are comparing l and l', so use with clause with them
+
+infixl 21 _[_↤_]
+
+-- Definition 3: syntax for expressions. Please add the missing constructors
+-- (deref, tt, ff, iszero)
+data Expr : Set where
+  nat : ℕ → Expr
+  _⊕_ : Expr → Expr → Expr
+  _⊖_ : Expr → Expr → Expr
+  deref : Loc → Expr
+  tt : Expr
+  ff : Expr
+  iszero : Expr → Expr
+
+-- Common names (see "Generalization of Declared Variables" in the Agda manual)
+private
+  variable
+    l : Loc
+    v v₁ v₂ : V
+    s s' s'' : S
+    n m : ℕ
+    b : Bool
+    e e₁ e₂ : Expr
+
+-- Figure 1: big-step operational semantics (a.k.a. "natural/evaluation sem.")
+-- of Expr. Signature is induced by equation 4. Please add the missing
+-- constructors (true, false, deref, isZeroF, isZeroT).
+infixr 19 _,_⇓_
+
+data _,_⇓_ : Expr → S → V → Set where -- input: \d=
+  lit : nat n , s ⇓ natV n
+  plus : e₁ , s ⇓ natV n → e₂ , s ⇓ natV m → e₁ ⊕ e₂ , s ⇓ natV (n + m)
+  minus : e₁ , s ⇓ natV n → e₂ , s ⇓ natV m → e₁ ⊖ e₂ , s ⇓ natV (n - m)
+  true : tt , s ⇓ boolV true
+  false : ff , s ⇓ boolV false
+  deref : deref l , s ⇓ s l
+  isZeroF : e , s ⇓ natV (suc n) → iszero e , s ⇓ boolV false
+  isZeroT : e , s ⇓ natV zero → iszero e , s ⇓ boolV true
+
+-- Exercise 1 (homework): do you remember Arith's small-step semantics from
+-- lectures 2-3? Can you express Arith's syntax as an Agda datatype, and then
+-- write down big-step semantics for it?
+
+-- Equation 7: denotational semantics of Expr
+eval : S → Expr → Maybe V
+eval = {!!}
+
+-- Exercise 3: operational and denotational semantics for Exp "match"
+⇓→eval : e , s ⇓ v → eval s e ≡ just v
+⇓→eval = {!!}
+
+⇓←eval : eval s e ≡ just v → e , s ⇓ v
+⇓←eval = {!!}
+
+-- Corollary: determinism for expression evaluation according to our operational
+-- semantics
+deterministic⇓ : e , s ⇓ v₁ → e , s ⇓ v₂ → v₁ ≡ v₂
+deterministic⇓ = {!!}
+
+-- Equation 2: syntax for imp programs. Please add the missing constructors
+-- (loop, skip, _⨟_ a.k.a \z;).
+data Stm : Set where
+  _≔_ : Loc → Expr → Stm -- input: \:=
+  if_then_else_ : Expr → Stm → Stm → Stm
+
+-- Exercise 2 (homework): write down a Imp program
+--
+-- fib : Stm
+--
+-- that computes Fibonacci sequences.
+
+private
+  variable
+    p p' p'' q q' p₁ p₂ : Stm
+
+-- Unrolls a loop of n iterations and with nucleus p as p ⨟ ... ⨟ p ⨟ skip
+-- (where p is repeated n times).
+unroll : ℕ → Stm → Stm
+unroll = {!!}
+
+-- Figure 3: alternative operational semantics of Imp. The original semantics of
+-- Imp from figure 2 (without explicit failure) are not much more interesting.
+-- We declared all type families in advance to allow for mutual induction.
+-- Please add the missing constructors (skip, for₁, forBad, seq₁, seq₂, seqBad).
+data _,_↓_ : Stm → S → S → Set -- input: \d-
+data _,_↦_,_ : Stm → S → Stm → S → Set -- input: \mapsto or \r-|
+data _,_↓×,_ : Stm → S → S → Set -- input (cross): \times
+
+infixr 19 _,_↓_
+infixr 19 _,_↦_,_
+infixr 19 _,_↓×,_
+
+data _,_↓_ where
+  eq₁ : eval s e ≡ just v → l ≔ e , s ↓ s [ l ↤ v ]
+
+data _,_↦_,_ where
+  ifTrue : eval s e ≡ just (boolV true) → if e then p₁ else p₂ , s ↦ p₁ , s
+  ifFalse : eval s e ≡ just (boolV false) → if e then p₁ else p₂ , s ↦ p₂ , s
+
+data _,_↓×,_ where
+  eq₂ : eval s e ≡ nothing → l ≔ e , s ↓×, s
+  ifBad₁ : eval s e ≡ just (natV n) →
+          if e then p₁ else p₂ , s ↓×, s
+  ifBad₂ : eval s e ≡ nothing →
+          if e then p₁ else p₂ , s ↓×, s
+
+-- To do this in a mutually inductive style vs one shared notation is
+-- purely for aesthetic reasons. We could instead define one datatype
+-- _,_↦_ where the last argument is of type...
+data TransitionOutput : Set where
+  comp : S → TransitionOutput
+  fail : S → TransitionOutput
+  cont : Stm → S → TransitionOutput
+
+-- Small-step operational semantics as a transition function
+transition : Stm → S → TransitionOutput
+transition = {!!}
+
+-- Bonus exercise (homwork): state and prove correctness of the transition
+-- function. As an immediate corollary, state and prove determinism for ↓, ↓×,
+-- and ↦. What else is missing for a proper account of determinism? State and
+-- prove those statements, too.
+
+-- Exercise 4: prove termination. Definition 2.2 specifies termination for the
+-- "original" Imp semantics only, much like theorem 2.3 only proves it for said
+-- semantics. The flavour of termination we are stating below is known as
+-- "may-termination".
+data Terminating (p : Stm) (s : S) : Set where
+  now-✓ : p , s ↓ s' → Terminating p s -- input: \checkmark
+  now-× : p , s ↓×, s' → Terminating p s
+  later : p , s ↦ p' , s' → Terminating p' s' → Terminating p s
+
+-- Hint: the following two lemmas might prove useful. The first is commented out
+-- in case you have not defined _⨟_ yet.
+-- ⨟Termination : Terminating p s → (∀ s → Terminating q s) →
+--                 Terminating (p ⨟ q) s
+-- ⨟Termination = ?
+
+seqTermination : (∀ s → Terminating p s) → Terminating (unroll n p) s
+seqTermination = {!!}
+
+impTermination : ∀ p s → Terminating p s
+impTermination = {!!}
+
+-- Exercise 5 (homework): write down a further variant of Imp that allows for
+-- pointer arithmetic, i.e. allowing to add or subtract from a known location
+-- l : Loc.
