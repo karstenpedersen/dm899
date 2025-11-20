@@ -87,7 +87,18 @@ data _,_⇓_ : Expr → S → V → Set where -- input: \d=
 
 -- Equation 7: denotational semantics of Expr
 eval : S → Expr → Maybe V
-eval = {!!}
+eval s (nat x) = just (natV x)
+eval s (e ⊕ e₁) = zipWithNatV _+_ (eval s e) (eval s e₁)
+eval s ((e ⊖ e₂) ⊕ e₁) = {!!}
+eval s (deref x ⊕ e₁) = {!!}
+eval s (tt ⊕ e₁) = {!!}
+eval s (ff ⊕ e₁) = {!!}
+eval s (iszero e ⊕ e₁) = {!!}
+eval s (e ⊖ e₁) = {!!}
+eval s (deref x) = {!!}
+eval s tt = {!!}
+eval s ff = {!!}
+eval s (iszero e) = {!!}
 
 -- Exercise 3: operational and denotational semantics for Exp "match"
 ⇓→eval : e , s ⇓ v → eval s e ≡ just v

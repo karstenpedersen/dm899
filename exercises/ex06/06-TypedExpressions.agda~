@@ -1,0 +1,78 @@
+-- Lecture 6: Typed Expressions
+module 06-TypedExpressions where
+
+open import Data.Product
+open import Data.Sum
+open import Relation.Binary.PropositionalEquality
+open import Data.Empty
+
+data Type : Set where
+  tyBool : Type
+  tyNat : Type
+
+data Expr : Set where
+  z : Expr
+  tt : Expr
+  ff : Expr
+  iszero : Expr → Expr
+  succ : Expr → Expr
+  pred : Expr → Expr
+  -- Please add the missing constructor if
+
+-- Common names (see "Generalization of Declared Variables",
+-- https://agda.readthedocs.io/en/stable/language/generalization-of-declared-variables.html)
+private
+  variable
+    t t₁ t₂ t₃ : Expr
+    τ τ₁ τ₂ : Type
+
+data Nval : Expr → Set where
+  zIsNval : Nval z
+  succNval : Nval t → Nval (succ t)
+
+data Val : Expr → Set where
+  ttVal : Val tt
+  ffVal : Val ff
+  nval : Nval t → Val t
+
+
+-- Typing Relation
+data _∈_ : Expr → Type → Set where -- input: \in
+  t-z : z ∈ tyNat
+  t-tt : tt ∈ tyBool
+  t-ff : ff ∈ tyBool
+  t-iszero : t ∈ tyNat → iszero t ∈ tyBool
+  -- Please add the missing constructors t-succ, t-pred, and t-if
+
+
+-- Operational Semantics of Expressions
+data _↦_ : Expr → Expr → Set where -- input: \mapsto or \r-|
+  e-IsZeroZ : iszero z ↦ tt
+  e-IsZeroS : Nval t → iszero (succ t) ↦ ff
+  e-IsZ : t₁ ↦ t₂ → iszero t₁ ↦ iszero t₂
+  -- Please add the missing constructors e-Succ, e-Pred, e-PredZ, e-predS,
+  -- e-ifT, e-IfF, and e-If
+
+
+-- Short exercises
+bad₁ : pred ff ↦ t₁ → ⊥
+bad₁ = ?
+
+val₁ : Val (succ (succ z))
+val₁ = ?
+
+
+-- Theorem
+-- Uniqueness of Types
+∈-Uniq : t ∈ τ₁ → t ∈ τ₂ → τ₁ ≡ τ₂
+∈-Uniq = ?
+
+-- Theorem
+-- Progress
+progress : t ∈ τ → Val(t) ⊎ Σ Expr (t ↦_) -- input: \Sigma
+progress = ?
+
+-- Theorem
+-- Preservation
+preservation : t ∈ τ → t ↦ t₁ → t₁ ∈ τ
+preservation = ?

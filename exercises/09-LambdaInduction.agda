@@ -1,0 +1,122 @@
+module 09-LambdaInduction where
+
+open import Agda.Builtin.Nat
+open import Data.Vec
+open import Data.Fin
+open import Data.Product
+open import Relation.Binary.PropositionalEquality
+open import Data.Empty
+
+-- Context n specifies that the allowed free variables are 0, ..., n - 1.
+Context : Set
+Context = Nat
+
+-- An element x : Variable n is a natural number m such that m < n.
+Variable : Context → Set
+Variable = Fin -- have a look at the definition of Fin!
+
+data Term (n : Context) : Set where
+  var : Variable n → Term n
+  lam : Term (suc n) → Term n
+  app : Term n → Term n → Term n
+
+-- Weakening of a variable.
+-- Any var x = m < n is also a variable for (suc n), as m < suc n. Try inputting
+-- "inject₁" in the hole to check its type.
+shiftVar : ∀ {n} → Variable n → Variable (suc n)
+shiftVar = inject₁
+
+-- Shifting or weakening of a term. Input: \u-
+↑ : ∀ {n} → Term n → Term (suc n)
+↑ (var x) = var (shiftVar x)
+↑ (lam p) = lam (↑ p)
+↑ (app t s) = app (↑ t) (↑ s)
+
+-- Simultaneous substitutions.
+-- A substitution Sub n m is an m-long vector of T n. The term at index i is
+-- meant to replace the i-th variable in the context of length n.
+Sub : Context → Context → Set
+Sub n m = Vec (Term n) m -- have a look at the definition of Vec!
+
+-- Shifting of a substitution
+-- Try inputting "map" in the hole to check its type.
+S↑ : ∀ {n} {m} → Sub n m → Sub (suc n) m
+S↑ = Data.Vec.map ↑
+
+-- The 'identity' substitution is the sequence
+-- var zero, var 1, var 2, var 3...
+idSub : ∀ {n} → Sub n n
+idSub {zero} = []
+idSub {suc n} = var zero ∷ Data.Vec.map ↑ idSub
+
+-- Simultaneous substitution evaluation.
+-- Try inputting "lookup" in the hole to check its type.
+_<_> : ∀ {n} {m} → Term n → Sub m n → Term m
+var x < sub > = lookup sub x
+lam t < sub > = lam (t < var zero ∷ S↑ sub >)
+app t s < sub > = app (t < sub >) (s < sub >)
+
+-- Single-variable substitution
+-- Given a term t : Term (n + 1) and a term s : T n, produce a new term t ∣ s ∣
+-- by substituting any occurrences of zero in t with s
+_∣_∣ : ∀ {n} → Term (suc n) → Term n → Term n
+t ∣ s ∣ = t < s ∷ idSub >
+
+-- Below we are implementing weak β-reduction.
+-- By allowing beta reductions inside λ-expressions, we instead get the
+-- so-called strong β-reduction.
+-- By removing the app₂ clause, we instead get call-by-name reduction.
+-- There are many reduction strategies in the λ-calculus!
+data _↦_ {n : Context} : Term n → Term n → Set where
+  app₁ : ∀ {t₁ t₂ s} → t₁ ↦ t₂ → app t₁ s ↦ app t₂ s
+  app₂ : ∀ {t s₁ s₂} → s₁ ↦ s₂ → app t s₁ ↦ app t s₂
+  β : ∀ {t s} → app (lam t) s ↦ (t ∣ s ∣)
+
+-- Call-by-name reduction
+data _↦₂_ {n : Context} : Term n → Term n → Set where
+  app₁ : ∀ {t₁ t₂ s} → t₁ ↦₂ t₂ → app t₁ s ↦₂ app t₂ s
+  β : ∀ {t s} → app (lam t) s ↦₂ (t ∣ s ∣)
+
+-- Reflexive-transitive closure
+data _⟾_ {n : Context} : Term n → Term n → Set where
+  rfl : ∀ {t} → t ⟾ t
+  trns : ∀ {t s₁ s₂} → t ⟾ s₁ → s₁ ↦ s₂ → t ⟾ s₂
+
+-- Principle of term induction
+LamInduction : ∀ (Prop : ∀ {n} → Term n → Set)
+  → (varProp : ∀ {n} → (x : Variable n) → Prop (var x))
+  → (lamProp : ∀ {n} → (t : Term (suc n)) → Prop t → Prop (lam t))
+  → (appProp : ∀ {n} → (t : Term n) → (s : Term n) → Prop t → Prop s → Prop (app t s))
+  → ∀ {n} (t : Term n) → Prop t
+LamInduction Prop varProp lamProp appProp t = h t
+  where
+  h : ∀ {n} → (t : Term n) → Prop t
+  h = {!!}
+
+↦Induction : ∀ (Rel : ∀ {n} → Term n → Term n → Set)
+  → (app₁Rel : ∀ {n} {t₁ t₂ s : Term n} → Rel t₁ t₂ → Rel (app t₁ s) (app t₂ s))
+  → (app₂Rel : ∀ {n} {t₁ t₂ s : Term n} → Rel t₁ t₂ → Rel (app s t₁) (app s t₂))
+  → (βRel : ∀ {n} {t : Term (suc n)} {s : Term n} → Rel (app (lam t) s) (t ∣ s ∣))
+  → ∀ {n} {t s : Term n} → t ↦ s → Rel t s
+↦Induction Rel app₁Rel app₂Rel βRel related = h related
+ where
+ h : ∀ {n} {t s : Term n} → t ↦ s → Rel t s
+ h = {!!}
+
+↦₂Induction : ∀ (Rel : ∀ {n} → Term n → Term n → Set)
+  → (app₁Rel : ∀ {n} {t₁ t₂ s : Term n} → Rel t₁ t₂ → Rel (app t₁ s) (app t₂ s))
+  → (βRel : ∀ {n} {t : Term (suc n)} {s : Term n} → Rel (app (lam t) s) (t ∣ s ∣))
+  → ∀ {n} {t s : Term n} → t ↦₂ s → Rel t s
+↦₂Induction Rel app₁Rel βRel related = h related
+ where
+ h : ∀ {n} {t s : Term n} → t ↦₂ s → Rel t s
+ h = {!!}
+
+-- Weak β-reduction is not deterministic
+Non-Determinism : (∀ n {t t₁ t₂ : Term n} → t ↦ t₁ → t ↦ t₂ → t₁ ≡ t₂) → ⊥
+Non-Determinism = {!!} -- hint: think of a counter-example!
+
+-- Call-by-name reduction is deterministic
+-- Bonus  exercise: use ↦₂Induction!
+Determinism : ∀ {n} → {t t₁ t₂ : Term n} → t ↦₂ t₁ → t ↦₂ t₂ → t₁ ≡ t₂
+Determinism = {!!}

@@ -1,0 +1,66 @@
+module 08-DeBruijnSolution where
+
+open import Agda.Builtin.Nat
+open import Data.Vec
+open import Data.Fin
+
+-- Context n specifies that the allowed free variables are 0, ..., n - 1.
+Context : Set
+Context = Nat
+
+-- An element x : Variable n is a natural number m such that m < n.
+Variable : Context → Set
+Variable = Fin -- have a look at the definition of Fin!
+
+data Term (n : Context) : Set where
+  var : Variable n → Term n
+  lam : Term (suc n) → Term n
+  app : Term n → Term n → Term n
+
+-- Weakening of a variable.
+-- Any var x = m < n is also a variable for (suc n), as m < suc n. Try inputting
+-- "inject₁" in the hole to check its type.
+shiftVar : ∀ {n} → Variable n → Variable (suc n)
+shiftVar = inject₁
+
+-- Shifting or weakening of a term. Input: \u-
+↑ : ∀ {n} → Term n → Term (suc n)
+↑ (var x) = var (shiftVar x)
+↑ (lam p) = lam (↑ p)
+↑ (app t s) = app (↑ t) (↑ s)
+
+-- Simultaneous substitutions.
+-- A substitution Sub n m is an m-long vector of T n. The term at index i is
+-- meant to replace the i-th variable in the context of length n.
+Sub : Context → Context → Set
+Sub n m = Vec (Term n) m -- have a look at the definition of Vec!
+
+-- Shifting of a substitution
+-- Try inputting "map" in the hole to check its type.
+S↑ : ∀ {n} {m} → Sub n m → Sub (suc n) m
+S↑ = map ↑
+
+-- The 'identity' substitution is the sequence
+-- var zero, var 1, var 2, var 3...
+idSub : ∀ {n} → Sub n n
+idSub {zero} = []
+idSub {suc n} = var zero ∷ map ↑ idSub
+
+-- Simultaneous substitution evaluation.
+-- Try inputting "lookup" in the hole to check its type.
+_<_> : ∀ {n} {m} → Term n → Sub m n → Term m
+var x < sub > = lookup sub x
+lam t < sub > = lam (t < var zero ∷ S↑ sub >)
+app t s < sub > = app (t < sub >) (s < sub >)
+
+-- Single-variable substitution
+-- Given a term t : Term (n + 1) and a term s : T n, produce a new term t ∣ s ∣
+-- by substituting any occurrences of zero in t with s
+_∣_∣ : ∀ {n} → Term (suc n) → Term n → Term n
+t ∣ s ∣ = t < s ∷ idSub >
+
+-- β-reduction
+data _↦_ {n : Context} : Term n → Term n → Set where
+  app₁ : ∀ {t₁ t₂ s} → t₁ ↦ t₂ → app t₁ s ↦ app t₂ s
+  app₂ : ∀ {t s₁ s₂} → s₁ ↦ s₂ → app t s₁ ↦ app t s₂
+  β : ∀ {t s} → app (lam t) s ↦ (t ∣ s ∣)
